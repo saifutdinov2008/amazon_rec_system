@@ -6,3 +6,4 @@ tqdm
 nltk
 pymystem3
 gensim
+scipy
