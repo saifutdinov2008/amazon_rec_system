@@ -1,1 +1,8 @@
 streamlit
+numpy
+pandas
+matplotlib
+tqdm
+nltk
+pymystem3
+gensim
