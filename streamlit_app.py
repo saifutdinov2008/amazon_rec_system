@@ -12,7 +12,12 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
+nltk.download('punkt')
 nltk.download('stopwords')
+nltk.download('wordnet')
+
+lemmatizer = WordNetLemmatizer()
+stop_words = stopwords.words('english')
 
 
 # Load dataset
@@ -52,20 +57,15 @@ price_range = st.sidebar.slider("💲 Price Range", min_value=0.0, max_value=flo
                                 value=(10.0, 70.0), step=1.0)
 
 
-# init lemmatizer to avoid slow performance
-mystem = Mystem() 
 
 def word_tokenize_clean(doc: str, stop_words: list):
     '''
-    tokenize from string to list of words
+    Tokenize string into cleaned list of lemmatized English words
     '''
-
-    # split into lower case word tokens \w lemmatization
-    tokens = list(set(mystem.lemmatize(doc.lower())))
-  
-    # remove tokens that are not alphabetic (including punctuation) and not a stop word
-    tokens = [word for word in tokens if word.isalpha() and not word in stop_words \
-              not in list(punctuation)]
+    doc = doc.lower()
+    doc = re.sub(r'[^\w\s]', '', doc)  # remove punctuation
+    tokens = word_tokenize(doc)
+    tokens = [lemmatizer.lemmatize(word) for word in tokens if word.isalpha() and word not in stop_words]
     return tokens
 
 tags_corpus = df['title'].values
