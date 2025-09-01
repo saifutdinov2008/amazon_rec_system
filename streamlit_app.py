@@ -18,18 +18,14 @@ nltk.download("wordnet")
 df = pd.read_csv("amz_total_data_limited.csv")
 model = Doc2Vec.load("doc2vec_model.bin")
 
-# Preprocessing tools
 lemmatizer = WordNetLemmatizer()
 stop_words = stopwords.words("english")
 
 st.title("🛍️ Product Recommender")
 
 # --- CATEGORY SELECTION AS BUTTONS ---
-
-# Get unique categories sorted
 categories = sorted(df['categoryName'].dropna().unique())
 
-# Initialize session state for categories if not present
 if "selected_categories" not in st.session_state:
     st.session_state.selected_categories = []
 
@@ -39,37 +35,35 @@ def toggle_category(cat):
     else:
         st.session_state.selected_categories.append(cat)
 
-# Show categories as buttons with toggle functionality
 cols = st.columns(5)
 for i, cat in enumerate(categories):
     col = cols[i % 5]
     is_selected = cat in st.session_state.selected_categories
-    # Different background color if selected
-    button_label = f"{cat}"
+    label = f"{cat}"
     if is_selected:
-        if col.button(button_label, key=f"cat_{i}"):
+        if col.button(label, key=f"cat_{i}"):
             toggle_category(cat)
     else:
-        if col.button(button_label, key=f"cat_{i}"):
+        if col.button(label, key=f"cat_{i}"):
             toggle_category(cat)
 
 selected_categories = st.session_state.selected_categories
 
-# If no categories selected, show top popular categories (based on count)
+# Show top popular categories if none selected
 if not selected_categories:
     popular_cats = df['categoryName'].value_counts().nlargest(5).index.tolist()
-    st.write("Showing top popular categories (auto-selected):")
     selected_categories = popular_cats
+    st.write(f"Showing top popular categories (auto-selected): {', '.join(selected_categories)}")
+else:
+    st.markdown(f"**Selected Categories:** {', '.join(selected_categories)}")
 
-st.markdown(f"**Selected Categories:** {', '.join(selected_categories)}")
-
-# --- PRICE RANGE SLIDER ---
+# Price range slider
 price_min = float(df["price"].min())
 price_max = float(df["price"].max())
 price_range = st.slider("💲 Price Range", min_value=price_min, max_value=price_max,
                         value=(price_min, price_max))
 
-# --- PRODUCT SELECTBOX ---
+# Product selectbox
 product_titles = df['title'].fillna("").astype(str).tolist()
 title_to_index = {title: idx for idx, title in enumerate(product_titles)}
 
@@ -128,7 +122,6 @@ def recommend(product_index=-1, top_n=20, fromvalue=None, tovalue=None, category
 
     result = merged.sort_values("rank_score", ascending=False).head(top_n)
 
-    # Return similarity column for metric calculations too if product_index != -1
     if product_index != -1:
         return result[[
             "title", "stars", "reviews", "boughtInLastMonth", "similarity", "rank_score",
@@ -139,8 +132,6 @@ def recommend(product_index=-1, top_n=20, fromvalue=None, tovalue=None, category
             "title", "stars", "reviews", "boughtInLastMonth", "rank_score",
             "productURL", "categoryName", "imgUrl", "price"
         ]]
-
-# --- MRR Calculation ---
 
 def calculate_mrr(model, df, queries, top_n=20):
     reciprocal_ranks = []
@@ -172,12 +163,9 @@ sample_queries = random.sample(range(len(df)), 50)
 mrr_score = calculate_mrr(model, df, sample_queries, top_n=20)
 st.metric("Mean Reciprocal Rank (MRR) @ 20", f"{mrr_score:.3f}")
 
-# --- Recommendation Logic & Display ---
-
 if selected_title != "None":
     product_idx = title_to_index[selected_title]
 
-    # Show selected product first
     selected_product = df.loc[product_idx]
     st.subheader(f"🛒 Selected Product: **{selected_product['title']}**")
     cols = st.columns([1, 3])
@@ -193,7 +181,6 @@ if selected_title != "None":
     st.subheader(f"🔁 Products similar to: **{selected_title}**")
 
     if not recs.empty:
-        # Show metrics for similar products
         avg_sim = recs["similarity"].mean()
         top_sim = recs["similarity"].max()
         st.metric("🔗 Avg Similarity (Top 20)", f"{avg_sim:.3f}")
