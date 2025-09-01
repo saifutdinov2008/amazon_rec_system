@@ -25,18 +25,24 @@ stop_words = set(stopwords.words("english"))
 df["title"] = df["title"].fillna("").astype(str)
 df["categoryName"] = df["categoryName"].fillna("Unknown")
 
-# Title to index mapping
 product_titles = df['title'].tolist()
 title_to_index = {title: idx for idx, title in enumerate(product_titles)}
 
-# Streamlit app title
+# -------------------------------
+# Streamlit Title
+# -------------------------------
 st.title("🛍️ Product Recommender")
 
 # -------------------------------
-# 📁 Category Selection (Main Area)
+# 🔁 Session State for Categories
 # -------------------------------
+if "selected_categories" not in st.session_state:
+    st.session_state.selected_categories = []
 
-st.subheader("📁 Select Product Categories")
+# -------------------------------
+# 📁 Category Selection with Unified Shape
+# -------------------------------
+st.subheader("📁 Choose Categories")
 
 # Top categories by popularity
 top_categories = (
@@ -48,44 +54,36 @@ top_categories = (
 )
 all_categories = sorted(df["categoryName"].unique())
 
-# Multiselect for categories
-selected_categories = st.multiselect(
-    "You can select multiple categories:",
-    options=all_categories,
-)
+# Display categories as toggle buttons
+num_cols = 5
+category_cols = st.columns(num_cols)
+
+for i, cat in enumerate(all_categories):
+    col = category_cols[i % num_cols]
+    if cat in st.session_state.selected_categories:
+        if col.button(f"✅ {cat}"):
+            st.session_state.selected_categories.remove(cat)
+    else:
+        if col.button(f"{cat}"):
+            st.session_state.selected_categories.append(cat)
 
 # Fallback to top categories
-if not selected_categories:
+if not st.session_state.selected_categories:
     selected_categories = top_categories
     st.caption("No categories selected — showing top popular categories.")
-
-# Show selected/unselected categories with visual diff
-st.write("### 🧾 Selected Categories:")
-selected_cols = st.columns(len(selected_categories) if selected_categories else 1)
-for i, cat in enumerate(selected_categories):
-    with selected_cols[i]:
-        st.success(cat)
-
-unselected = [c for c in all_categories if c not in selected_categories]
-if unselected:
-    st.write("### 📦 Other Categories:")
-    unselected_cols = st.columns(min(5, len(unselected)))
-    for i, cat in enumerate(unselected):
-        with unselected_cols[i % len(unselected_cols)]:
-            st.info(cat)
+else:
+    selected_categories = st.session_state.selected_categories
 
 # -------------------------------
 # 💲 Price Range Filter
 # -------------------------------
-
 price_min = float(df["price"].min())
 price_max = float(df["price"].max())
 price_range = st.slider("💰 Price Range", min_value=price_min, max_value=price_max, value=(price_min, price_max))
 
 # -------------------------------
-# 🔍 Product Selection (Optional)
+# 🔍 Product Selection
 # -------------------------------
-
 st.subheader("🎯 Choose a Product (Optional)")
 selected_title = st.selectbox("Search Product Title", ["None"] + product_titles)
 product_index = title_to_index.get(selected_title) if selected_title != "None" else -1
@@ -93,7 +91,6 @@ product_index = title_to_index.get(selected_title) if selected_title != "None" e
 # -------------------------------
 # 🧼 Preprocessing
 # -------------------------------
-
 def preprocess(text):
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
@@ -104,7 +101,6 @@ def preprocess(text):
 # -------------------------------
 # 🔁 Recommendation Logic
 # -------------------------------
-
 def recommend(product_index=-1, top_n=20, fromvalue=None, tovalue=None, category_list=None):
     full_df = df.copy()
 
@@ -153,11 +149,25 @@ def recommend(product_index=-1, top_n=20, fromvalue=None, tovalue=None, category
     ]]
 
 # -------------------------------
-# 🔁 Show Doc2Vec Similar Products
+# 📦 Display Selected Product
 # -------------------------------
-
 if product_index != -1:
-    st.markdown("### 🔗 Most Similar Products")
+    st.markdown("### 🧾 Selected Product")
+    selected_product = df.iloc[product_index]
+    cols = st.columns([1, 3])
+    with cols[0]:
+        st.image(selected_product['imgUrl'], width=100)
+    with cols[1]:
+        st.markdown(f"**{selected_product['title']}**")
+        st.markdown(f"⭐ {selected_product['stars']} | 💬 {int(selected_product['reviews'])} reviews | 🛒 {int(selected_product['boughtInLastMonth'])} bought")
+        st.markdown(f"💲 **{selected_product['price']}**")
+        st.markdown(f"[🔗 View Product]({selected_product['productURL']})")
+    st.markdown("---")
+
+    # -------------------------------
+    # 🔁 Similar Products
+    # -------------------------------
+    st.markdown("### 🔗 Similar Products")
     similar_recs = recommend(
         product_index=product_index,
         fromvalue=price_range[0],
@@ -179,7 +189,6 @@ if product_index != -1:
 # -------------------------------
 # 🧠 Category-based Recommendations
 # -------------------------------
-
 st.markdown("### 🧠 Category-based Recommendations")
 
 category_recs = recommend(
