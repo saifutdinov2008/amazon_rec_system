@@ -37,7 +37,7 @@ selected_categories = st.sidebar.multiselect("📁 Or Select Categories", catego
 # Price range
 price_min = float(df["price"].min())
 price_max = float(df["price"].max())
-price_range = st.sidebar.slider("💲 Price Range", min_value=price_min, max_value=price_max, value=(10.0, 70.0))
+price_range = st.sidebar.slider("💲 Price Range", min_value=price_min, max_value=price_max, value=(0.0, 13376.0))
 
 # Clean text
 def preprocess(text):
