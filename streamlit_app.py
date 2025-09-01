@@ -133,35 +133,38 @@ def recommend(product_index=-1, top_n=20, fromvalue=None, tovalue=None, category
             "productURL", "categoryName", "imgUrl", "price"
         ]]
 
-def calculate_mrr(model, df, queries, top_n=20):
-    reciprocal_ranks = []
+def calculate_mapk(model, df, queries, k=20):
+    average_precisions = []
 
     for q_idx in queries:
-        inferred_vector = model.dv[str(q_idx)]
-        similars = model.dv.most_similar([inferred_vector], topn=top_n)
-
         query_category = df.loc[q_idx, "categoryName"]
 
-        rank = None
+        inferred_vector = model.dv[str(q_idx)]
+        similars = model.dv.most_similar([inferred_vector], topn=k)
+
+        relevant_count = 0
+        precisions = []
+
         for i, (rec_idx_str, _) in enumerate(similars, start=1):
             rec_idx = int(rec_idx_str)
             rec_category = df.loc[rec_idx, "categoryName"]
             if rec_category == query_category:
-                rank = i
-                break
+                relevant_count += 1
+                precisions.append(relevant_count / i)
 
-        if rank:
-            reciprocal_ranks.append(1 / rank)
+        if precisions:
+            average_precisions.append(np.mean(precisions))
         else:
-            reciprocal_ranks.append(0.0)
+            average_precisions.append(0.0)
 
-    return np.mean(reciprocal_ranks)
+    return np.mean(average_precisions)
 
-# Show MRR metric
+
+# Show MAP metric
 st.subheader("📈 Model Quality Metrics")
 sample_queries = random.sample(range(len(df)), 50)
-mrr_score = calculate_mrr(model, df, sample_queries, top_n=20)
-st.metric("Mean Reciprocal Rank (MRR) @ 20", f"{mrr_score:.3f}")
+mapk_score = calculate_mapk(model, df, sample_queries, k=20)
+st.metric("Mean Average Precision (MAP@20)", f"{mapk_score:.3f}")
 
 if selected_title != "None":
     product_idx = title_to_index[selected_title]
