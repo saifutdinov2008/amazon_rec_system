@@ -173,7 +173,7 @@ if selected_title != "None":
     st.subheader(f"🛒 Selected Product: **{selected_product['title']}**")
     cols = st.columns([1, 3])
     with cols[0]:
-        st.image(selected_product['imgUrl'], width=120)
+        st.image(selected_product['imgUrl'], width=120, height = 150)
     with cols[1]:
         st.markdown(f"⭐ {selected_product['stars']} | 💬 {int(selected_product['reviews'])} reviews | 🛒 {int(selected_product['boughtInLastMonth'])} bought")
         st.markdown(f"💲 **{selected_product['price']}**")
